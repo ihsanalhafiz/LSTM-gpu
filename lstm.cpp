@@ -686,8 +686,8 @@ void Lstm::train(vector<DataType*> trainSet, vector<DataType*> labelSet, int epo
 		}
 
 		if(e>0 && verRmse!=0 && (verRmse-lastVerRmse)>(verificationAvg*0.025)){
-			// cout<<"verification rmse ascend too much:"<<verRmse-lastVerRmse<<", stop in epoche:"<<e<<endl;
-			// cout<<"verification rmse ascend or got tiny diff, stop in epoche:"<<e<<endl;
+			cout<<"verification rmse ascend too much:"<<verRmse-lastVerRmse<<", stop in epoche:"<<e<<endl;
+			cout<<"verification rmse ascend or got tiny diff, stop in epoche:"<<e<<endl;
 			break;
 		}
 
