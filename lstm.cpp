@@ -82,7 +82,7 @@ void Lstm::resetStates(){
 }
 
 /*
-打印权值，用于调试
+Print weights for debugging
 */
 void Lstm::showWeights(){
 	cout<<"--------------------Wx+b=Y-----------------"<<endl;
@@ -112,7 +112,7 @@ void Lstm::showWeights(){
 }
 
 /*
-初始化网络权值
+Initialize network weights
 */
 void Lstm::renewWeights(){
 	initW(_W_I, _inNodeNum, _hideNodeNum);
@@ -134,11 +134,11 @@ void Lstm::renewWeights(){
 
 
 /*
-构造函数
-参数：
-innode、输入单元个数（特征数）
-hidenode、隐藏单元个数
-outnode、输出单元个数（结果维度）
+Constructor
+Parameters:
+innode, number of input units (number of features)
+hidenode, number of hidden units
+outnode, number of output units (result dimension)
 */
 Lstm::Lstm(int innode, int hidenode, int outnode){
     _inNodeNum = innode;
@@ -147,7 +147,7 @@ Lstm::Lstm(int innode, int hidenode, int outnode){
 	_verification = 0;
 	_learningRate = LEARNING_RATE;
 
-    //动态初始化权值
+    //Dynamically initialize weights
     _W_I = (double**)malloc(sizeof(double*)*_inNodeNum);
     _W_F = (double**)malloc(sizeof(double*)*_inNodeNum);
     _W_O = (double**)malloc(sizeof(double*)*_inNodeNum);
@@ -187,7 +187,7 @@ Lstm::Lstm(int innode, int hidenode, int outnode){
 }
 
 /*
-析构函数，释放内存
+Destructor, release memory
 */
 Lstm::~Lstm(){
 	resetStates();
@@ -300,17 +300,17 @@ Lstm::~Lstm(){
 }
 
 /*
-计算训练集的损失
-参数：
-x、训练特征集
-y、训练标签集
+Calculate the loss of the training set
+Parameters:
+x, training feature set
+y, training label set
 */
 double Lstm::trainLoss(vector<DataType*> x, vector<DataType*> y){
 	if(x.size()<=0 || y.size()<=0 || x.size()!=y.size()) return 0;
 	double rmse = 0;
 	double error = 0.0;
 	int len = x.size();
-	len -= _verification*len;//训练集长度
+	len -= _verification*len;//Training set length
 	FOR(i, len){
 		LstmStates *state = forward(x[i]);
 		DataType *pre = state->Y;
@@ -328,18 +328,18 @@ double Lstm::trainLoss(vector<DataType*> x, vector<DataType*> y){
 
 
 /*
-计算验证集的损失，参数于上一个函数相同，通过_verification计算验证集的起始下标
-参数：
-x、训练特征集
-y、训练标签集
+Calculate the loss of the validation set. The parameters are the same as the previous function. The starting subscript of the validation set is calculated through _verification
+Parameters:
+x, training feature set
+y, training label set
 */
 double Lstm::verificationLoss(vector<DataType*> x, vector<DataType*> y){
 	if(x.size()<=0 || y.size()<=0 || x.size()!=y.size()) return 0;
 	double rmse = 0;
 	double error = 0.0;
 	int len = x.size();
-	int start = len-_verification*len;//验证集起始下标
-	if(start==len) return 0;//验证集数量为0
+	int start = len-_verification*len;//Validation set starting subscript
+	if(start==len) return 0;//The number of validation sets is 0
 	for(int i=start;i<len;++i){
 		LstmStates *state = forward(x[i]);
 		DataType *pre = state->Y;
@@ -357,9 +357,9 @@ double Lstm::verificationLoss(vector<DataType*> x, vector<DataType*> y){
 
 
 /*
-单个样本正向传播
-参数：
-x、单个样本特征向量
+Single sample forward propagation
+Parameters:
+x, single sample feature vector
 */
 LstmStates *Lstm::forward(DataType *x){
 	if(x==NULL){
@@ -370,13 +370,11 @@ LstmStates *Lstm::forward(DataType *x){
  //    LstmStates *lstates = (LstmStates*)malloc(sizeof(LstmStates));
 	// memset(lstates, 0, sizeof(LstmStates));
 
-	//上个时间点的状态
 	if(_states.size()>0){
 		memcpy(lstates->PreS, _states[_states.size()-1]->S, sizeof(double)*_hideNodeNum);
 		memcpy(lstates->PreH, _states[_states.size()-1]->H, sizeof(double)*_hideNodeNum);
 	}
 
-    //输入层转播到隐层
     FOR(j, _hideNodeNum){   
         double inGate = 0.0;
         double outGate = 0.0;
@@ -408,33 +406,29 @@ LstmStates *Lstm::forward(DataType *x){
         lstates->F_G[j] = sigmoid(forgetGate);
         lstates->N_I[j] = tanh(newIn);
 
-        //得出本时间点状态
         lstates->S[j] = lstates->F_G[j]*lstates->PreS[j]+(lstates->N_I[j]*lstates->I_G[j]);
-        //本时间点的输出
         // lstates->H[j] = lstates->I_G[j]*tanh(lstates->S[j]);//!!!!!!
         lstates->H[j] = lstates->O_G[j]*tanh(lstates->S[j]);//changed
     }
 
-
-    //隐藏层传播到输出层
     double out = 0.0;
     FOR(i, _outNodeNum){
 	    FOR(j, _hideNodeNum){
 	        out += lstates->H[j] * _W_Y[j][i];
 	    }
 	    out += _B_Y[i];
-	    // lstates->Y[i] = sigmoid(out);//输出层各单元输出
-	    lstates->Y[i] = out;//输出层各单元输出
+	    // lstates->Y[i] = sigmoid(out);
+	    lstates->Y[i] = out;
 	}
 
     return lstates;
 }
 
 /*
-正向传播，暂未实现按batch_size计算。
-参数：
-trainSet、训练特征集，vector<特征向量（向量长度需与输入单元数量相同）>
-labelSet、训练标签集，vector<标签向量（向量长度需与输出单元数量相同）>
+Forward propagation, calculation by batch_size is not yet implemented.
+Parameters:
+trainSet, training feature set, vector<feature vector (vector length must be the same as the number of input units)>
+labelSet, training label set, vector<label vector (vector length must be the same as the number of output units)>
 */
 void Lstm::forward(vector<DataType*> trainSet, vector<DataType*> labelSet){
 	int len = trainSet.size();
@@ -454,67 +448,70 @@ void Lstm::forward(vector<DataType*> trainSet, vector<DataType*> labelSet){
 }
 
 /*
-反向传播,计算各个权重的偏导数
-参数：
-trainSet、训练特征集，vector<特征向量（向量长度需与输入单元数量相同）>
-deltas、存储每个权值偏导数的对象指针
+Backward propagation, calculate the partial derivatives of each weight
+Parameters:
+trainSet, training feature set, vector<feature vector (vector length must be the same as the number of input units)>
+deltas, object pointer to store the partial derivatives of each weight
 */
-void Lstm::backward(vector<DataType*> trainSet, Deltas *deltas){
-	if(_states.size()<=0){
-		cout<<"need go forward first."<<endl;
-	}
-    //隐含层偏差，通过当前之后一个时间点的隐含层误差和当前输出层的误差计算
-    double hDelta[_hideNodeNum];  
-    double *oDelta = new double[_hideNodeNum];
-    double *iDelta = new double[_hideNodeNum];
-    double *fDelta = new double[_hideNodeNum];
-    double *nDelta = new double[_hideNodeNum];
-    double *sDelta = new double[_hideNodeNum];
+void Lstm::backward(vector<DataType*> trainSet, Deltas *deltas) {
+    if (_states.size() <= 0) {
+        cout << "need to go forward first." << endl;
+        return;
+    }
 
-    //当前时间之后的一个隐藏层误差
-    double *oPreDelta = new double[_hideNodeNum]; 
-    double *iPreDelta = new double[_hideNodeNum];
-    double *fPreDelta = new double[_hideNodeNum];
-    double *nPreDelta = new double[_hideNodeNum];
-    double *sPreDelta = new double[_hideNodeNum];
-    double *fPreGate = new double[_hideNodeNum];
+    // Hidden layer deviation, calculated by the hidden layer error at a time point after the current one 
+    // and the error of the current output layer
+    double hDelta[_hideNodeNum];  // Error in the hidden state (gradient)
+    double *oDelta = new double[_hideNodeNum];  // Output gate delta (gradient)
+    double *iDelta = new double[_hideNodeNum];  // Input gate delta (gradient)
+    double *fDelta = new double[_hideNodeNum];  // Forget gate delta (gradient)
+    double *nDelta = new double[_hideNodeNum];  // New input gate delta (gradient)
+    double *sDelta = new double[_hideNodeNum];  // State delta (gradient for cell state)
 
-    memset(oPreDelta, 0, sizeof(double)*_hideNodeNum);
-    memset(iPreDelta, 0, sizeof(double)*_hideNodeNum);
-    memset(fPreDelta, 0, sizeof(double)*_hideNodeNum);
-    memset(nPreDelta, 0, sizeof(double)*_hideNodeNum);
-    memset(sPreDelta, 0, sizeof(double)*_hideNodeNum);
-    memset(fPreGate, 0, sizeof(double)*_hideNodeNum);
+    // Error at the hidden layer of the previous time step
+    double *oPreDelta = new double[_hideNodeNum];  // Previous output gate delta
+    double *iPreDelta = new double[_hideNodeNum];  // Previous input gate delta
+    double *fPreDelta = new double[_hideNodeNum];  // Previous forget gate delta
+    double *nPreDelta = new double[_hideNodeNum];  // Previous new input gate delta
+    double *sPreDelta = new double[_hideNodeNum];  // Previous state delta
+    double *fPreGate = new double[_hideNodeNum];   // Previous forget gate values
 
+    // Initialize all pre-delta values to zero for the start of backpropagation
+    memset(oPreDelta, 0, sizeof(double) * _hideNodeNum);
+    memset(iPreDelta, 0, sizeof(double) * _hideNodeNum);
+    memset(fPreDelta, 0, sizeof(double) * _hideNodeNum);
+    memset(nPreDelta, 0, sizeof(double) * _hideNodeNum);
+    memset(sPreDelta, 0, sizeof(double) * _hideNodeNum);
+    memset(fPreGate, 0, sizeof(double) * _hideNodeNum);
 
-    int p = _states.size()-1;
-    for(; p>=0; --p){//batch=1
-    	// cout<<"p="<<p<<"|size:"<<_states.size()<<endl;
-        //当前隐藏层
-        double *inGate = _states[p]->I_G;     //输入门
-        double *outGate = _states[p]->O_G;    //输出门
-        double *forgetGate = _states[p]->F_G; //遗忘门
-        double *newInGate = _states[p]->N_I;  //新记忆
-        double *state = _states[p]->S;     //状态值
-        double *h = _states[p]->H;         //隐层输出值
+    // Start backpropagation from the last time step and move backward
+    int p = _states.size() - 1;
+    for (; p >= 0; --p) { // batch=1, process single sample at a time
+        // Current hidden layer gate and state values
+        double *inGate = _states[p]->I_G;     // Input gate values at time step p
+        double *outGate = _states[p]->O_G;    // Output gate values at time step p
+        double *forgetGate = _states[p]->F_G; // Forget gate values at time step p
+        double *newInGate = _states[p]->N_I;  // New input gate values at time step p
+        double *state = _states[p]->S;        // Cell state at time step p
+        double *h = _states[p]->H;            // Hidden state output at time step p
 
-        //前一个隐藏层
-        double *preH = _states[p]->PreH;   
-        double *preState = _states[p]->PreS;
+        // Hidden layer and cell state values from the previous time step
+        double *preH = _states[p]->PreH;      // Hidden state output from previous time step
+        double *preState = _states[p]->PreS;  // Cell state from previous time step
 
-        FOR(k, _outNodeNum){  //对于网络中每个输出单元，更新权值
-            //更新隐含层和输出层之间的连接权
-            FOR(j, _hideNodeNum){
+        // Update the weights between the hidden layer and the output layer
+        FOR(k, _outNodeNum) { // Loop over output layer units
+            FOR(j, _hideNodeNum) {  // Loop over hidden layer units
+                // Calculate weight update for connection from hidden layer to output layer
                 deltas->dwy[j][k].data += _states[p]->yDelta[k] * h[j];
-                // _W_Y[j][k] -= _learningRate * _states[p]->yDelta[k] * h[j];
             }
+            // Update bias for the output layer
             deltas->dby[k].data += _states[p]->yDelta[k];
-            // _B_Y[k] -= _learningRate * _states[p]->yDelta[k];
         }
 
-        //目标函数对于网络中每个隐藏单元的偏导数计算
-        FOR(j, _hideNodeNum){
-            //隐含层的各个门及单元状态
+        // Calculation of gradients for each hidden unit in the network
+        FOR(j, _hideNodeNum) { // Loop over hidden layer units
+            // Initialize the deltas (gradients) for this time step
             oDelta[j] = 0.0;
             iDelta[j] = 0.0;
             fDelta[j] = 0.0;
@@ -522,98 +519,114 @@ void Lstm::backward(vector<DataType*> trainSet, Deltas *deltas){
             sDelta[j] = 0.0;
             hDelta[j] = 0.0;
 
-            //目标函数对隐藏状态的偏导数
-            FOR(k, _outNodeNum){
-                hDelta[j] += _states[p]->yDelta[k] * _W_Y[j][k];
+            // Calculate the gradient of the objective function with respect to the hidden state
+            FOR(k, _outNodeNum) {
+                hDelta[j] += _states[p]->yDelta[k] * _W_Y[j][k]; // Contribution from output layer error
             }
-            FOR(k, _hideNodeNum){
+            FOR(k, _hideNodeNum) {
+                // Contribution from the next hidden state errors and gate deltas
                 hDelta[j] += iPreDelta[k] * _U_I[j][k];
                 hDelta[j] += fPreDelta[k] * _U_F[j][k];
                 hDelta[j] += oPreDelta[k] * _U_O[j][k];
                 hDelta[j] += nPreDelta[k] * _U_G[j][k];
             }
 
-            oDelta[j] = hDelta[j] * tanh(state[j]) * dsigmoid(outGate[j]);
-            sDelta[j] = hDelta[j] * outGate[j] * dtanh(state[j]) + sPreDelta[j] * fPreGate[j];
-            fDelta[j] = sDelta[j] * preState[j] * dsigmoid(forgetGate[j]);
-            iDelta[j] = sDelta[j] * newInGate[j] * dsigmoid(inGate[j]);
-            nDelta[j] = sDelta[j] * inGate[j] * dtanh(newInGate[j]);
+            // Calculate deltas for each gate
+            oDelta[j] = hDelta[j] * tanh(state[j]) * dsigmoid(outGate[j]);  // Output gate delta
+            sDelta[j] = hDelta[j] * outGate[j] * dtanh(state[j]) + sPreDelta[j] * fPreGate[j]; // State delta
+            fDelta[j] = sDelta[j] * preState[j] * dsigmoid(forgetGate[j]);  // Forget gate delta
+            iDelta[j] = sDelta[j] * newInGate[j] * dsigmoid(inGate[j]);     // Input gate delta
+            nDelta[j] = sDelta[j] * inGate[j] * dtanh(newInGate[j]);        // New input gate delta
 
-            //更新前一个隐含层和现在隐含层之间的权值
-            FOR(k, _hideNodeNum){
-                deltas->dui[k][j].data += iDelta[j] * preH[k];
-                deltas->duf[k][j].data += fDelta[j] * preH[k];
-                deltas->duo[k][j].data += oDelta[j] * preH[k];
-                deltas->dun[k][j].data += nDelta[j] * preH[k];
+            // Update weights between the previous hidden layer and the current hidden layer
+            FOR(k, _hideNodeNum) {
+                deltas->dui[k][j].data += iDelta[j] * preH[k];  // Update input gate weight
+                deltas->duf[k][j].data += fDelta[j] * preH[k];  // Update forget gate weight
+                deltas->duo[k][j].data += oDelta[j] * preH[k];  // Update output gate weight
+                deltas->dun[k][j].data += nDelta[j] * preH[k];  // Update new input gate weight
             }
 
-            //更新输入层和隐含层之间的连接权
-            FOR(k, _inNodeNum){
-                deltas->dwi[k][j].data += iDelta[j] * trainSet[p][k];
-                deltas->dwi[k][j].data += fDelta[j] * trainSet[p][k];
-                deltas->dwo[k][j].data += oDelta[j] * trainSet[p][k];
-                deltas->dwn[k][j].data += nDelta[j] * trainSet[p][k];
+            // Update weights between the input layer and the hidden layer
+            FOR(k, _inNodeNum) {
+                deltas->dwi[k][j].data += iDelta[j] * trainSet[p][k];  // Input gate weight update
+                deltas->dwi[k][j].data += fDelta[j] * trainSet[p][k];  // Forget gate weight update
+                deltas->dwo[k][j].data += oDelta[j] * trainSet[p][k];  // Output gate weight update
+                deltas->dwn[k][j].data += nDelta[j] * trainSet[p][k];  // New input gate weight update
             }
 
+            // Update biases for each gate
             deltas->dbi[j].data += iDelta[j];
             deltas->dbf[j].data += fDelta[j];
             deltas->dbo[j].data += oDelta[j];
             deltas->dbn[j].data += nDelta[j];
         }
 
-        if(p == (_states.size()-1)){
-            delete  []oPreDelta;
-            delete  []fPreDelta;
-            delete  []iPreDelta;
-            delete  []nPreDelta;
-            delete  []sPreDelta;
-            delete  []fPreGate;
+        // Free memory if we are at the last time step
+        if (p == (_states.size() - 1)) {
+            delete[] oPreDelta;
+            delete[] fPreDelta;
+            delete[] iPreDelta;
+            delete[] nPreDelta;
+            delete[] sPreDelta;
+            delete[] fPreGate;
         }
 
+        // Update previous deltas and gate values for the next iteration
         oPreDelta = oDelta;
         fPreDelta = fDelta;
         iPreDelta = iDelta;
         nPreDelta = nDelta;
         sPreDelta = sDelta;
         fPreGate = forgetGate;
-	}
-    delete  []oPreDelta;
-    delete  []fPreDelta;
-    delete  []iPreDelta;
-    delete  []nPreDelta;
-    delete  []sPreDelta;
+    }
 
-	return;
+    // Free memory for the final time step deltas
+    delete[] oPreDelta;
+    delete[] fPreDelta;
+    delete[] iPreDelta;
+    delete[] nPreDelta;
+    delete[] sPreDelta;
+
+    return;
 }
 
 /*
-根据各权值的偏导数更新权值
-参数：
-deltaSet、存储每个权值偏导数的对象指针
-epoche、当前迭代次数
+Update the weights based on the partial derivatives of the objective function.
+Parameters:
+deltaSet - Pointer to the object that stores the partial derivatives of each weight.
+epoche - The current iteration number (used for adaptive optimizers such as Adam).
 */
-void Lstm::optimize(Deltas *deltaSet, int epoche){
-    FOR(i, _outNodeNum){
-    	FOR(j, _hideNodeNum){
-    		_W_Y[j][i] = deltaSet->dwy[j][i].optimize(_W_Y[j][i], epoche);
-    	}
-    	_B_Y[i] = deltaSet->dby[i].optimize(_B_Y[i], epoche);
+void Lstm::optimize(Deltas *deltaSet, int epoche) {
+    // Update the weights connecting the hidden layer to the output layer
+    FOR(i, _outNodeNum) {  // Loop over each output unit
+        FOR(j, _hideNodeNum) {  // Loop over each hidden layer unit
+            // Use the optimizer to update the weight between hidden and output layers
+            _W_Y[j][i] = deltaSet->dwy[j][i].optimize(_W_Y[j][i], epoche);
+        }
+        // Update the bias for the output layer
+        _B_Y[i] = deltaSet->dby[i].optimize(_B_Y[i], epoche);
     }
 
-    FOR(j, _hideNodeNum){
-    	FOR(k, _hideNodeNum){
-    		_U_I[k][j] = deltaSet->dui[k][j].optimize(_U_I[k][j], epoche);
-    		_U_F[k][j] = deltaSet->duf[k][j].optimize(_U_F[k][j], epoche);
-    		_U_O[k][j] = deltaSet->duo[k][j].optimize(_U_O[k][j], epoche);
-    		_U_G[k][j] = deltaSet->dun[k][j].optimize(_U_G[k][j], epoche);
-    	}
-    	FOR(k, _inNodeNum){
-    		_W_I[k][j] = deltaSet->dwi[k][j].optimize(_W_I[k][j], epoche);
-    		_W_F[k][j] = deltaSet->dwf[k][j].optimize(_W_F[k][j], epoche);
-    		_W_O[k][j] = deltaSet->dwo[k][j].optimize(_W_O[k][j], epoche);
-    		_W_G[k][j] = deltaSet->dwn[k][j].optimize(_W_G[k][j], epoche);
-    	}
+    // Update the weights connecting the hidden layers (from previous hidden state to the current hidden state)
+    FOR(j, _hideNodeNum) {  // Loop over each hidden layer unit
+        FOR(k, _hideNodeNum) {  // Loop over previous hidden layer units
+            // Update the weights for input gate (U_I), forget gate (U_F), output gate (U_O), and new input gate (U_G)
+            _U_I[k][j] = deltaSet->dui[k][j].optimize(_U_I[k][j], epoche);
+            _U_F[k][j] = deltaSet->duf[k][j].optimize(_U_F[k][j], epoche);
+            _U_O[k][j] = deltaSet->duo[k][j].optimize(_U_O[k][j], epoche);
+            _U_G[k][j] = deltaSet->dun[k][j].optimize(_U_G[k][j], epoche);
+        }
+        
+        // Update the weights connecting the input layer to the hidden layer
+        FOR(k, _inNodeNum) {  // Loop over input layer units
+            // Update the weights for input gate (W_I), forget gate (W_F), output gate (W_O), and new input gate (W_G)
+            _W_I[k][j] = deltaSet->dwi[k][j].optimize(_W_I[k][j], epoche);
+            _W_F[k][j] = deltaSet->dwf[k][j].optimize(_W_F[k][j], epoche);
+            _W_O[k][j] = deltaSet->dwo[k][j].optimize(_W_O[k][j], epoche);
+            _W_G[k][j] = deltaSet->dwn[k][j].optimize(_W_G[k][j], epoche);
+        }
 
+        // Update the biases for the input gate, forget gate, output gate, and new input gate in the hidden layer
         _B_I[j] = deltaSet->dbi[j].optimize(_B_I[j], epoche);
         _B_F[j] = deltaSet->dbf[j].optimize(_B_F[j], epoche);
         _B_O[j] = deltaSet->dbo[j].optimize(_B_O[j], epoche);
@@ -621,16 +634,10 @@ void Lstm::optimize(Deltas *deltaSet, int epoche){
     }
 }
 
-double _LEARNING_RATE = LEARNING_RATE;//用于sgd优化器的全局学习率
-/*
-训练网络
-参数：
-trainSet、训练特征集
-labelSet、训练标签集
-epoche、迭代次数
-verification、验证集的比例
-stopThreshold、提前停止阈值，当两次迭代结果的变化小于此阈值则停止
-*/
+
+double _LEARNING_RATE = LEARNING_RATE;
+
+
 void Lstm::train(vector<DataType*> trainSet, vector<DataType*> labelSet, int epoche, double verification, double stopThreshold){
 	if(trainSet.size()<=0 || labelSet.size()<=0 || trainSet.size()!=labelSet.size()){
 		cout<<"data set error!"<<endl;
@@ -647,9 +654,8 @@ void Lstm::train(vector<DataType*> trainSet, vector<DataType*> labelSet, int epo
 
 	double lastTrainRmse = 0.0;
 	double lastVerRmse = 0.0;
-    _LEARNING_RATE = LEARNING_RATE;//开始训练前初始化学习率 适用于SGD优化器
+    _LEARNING_RATE = LEARNING_RATE;
 
-    //计算验证集的平均值
     double verificationAvg = 0.0;
     if(_verification>0){
         int verLen = _verification*labelSet.size();
@@ -664,27 +670,22 @@ void Lstm::train(vector<DataType*> trainSet, vector<DataType*> labelSet, int epo
     Deltas *deltaSet = new Deltas(_inNodeNum, _hideNodeNum, _outNodeNum);
     cout<<"deltaset inited. start trainning."<<endl;
 	FOR(e, epoche){	
-		//每次epoche清除单元状态
 		resetStates();
-		//正向传播
 		forward(trainSet, labelSet);
-		//反向计算误差并计算偏导数
-        deltaSet->resetDelta();//重置每个权值的偏导数值
+        deltaSet->resetDelta();
 		backward(trainSet, deltaSet);
-		//根据偏导数更新权重
 		optimize(deltaSet, e);
 
-		//验证前清除单元状态
 		resetStates();
 		double trainRmse = trainLoss(trainSet, labelSet);
 		double verRmse = verificationLoss(trainSet, labelSet);
 		// cout<<"epoche:"<<e<<"|rmse:"<<trainRmse<<endl;
-		if(e>0 && abs(trainRmse-lastTrainRmse) < stopThreshold){//变化足够小
+		if(e>0 && abs(trainRmse-lastTrainRmse) < stopThreshold){
 			cout<<"train rmse got tiny diff, stop in epoche:"<<e<<endl;
 			break;
 		}
 
-		if(e>0 && verRmse!=0 && (verRmse-lastVerRmse)>(verificationAvg*0.025)){//验证集准确率大幅下降则停止 0.03~0.04(84.792)
+		if(e>0 && verRmse!=0 && (verRmse-lastVerRmse)>(verificationAvg*0.025)){
 			// cout<<"verification rmse ascend too much:"<<verRmse-lastVerRmse<<", stop in epoche:"<<e<<endl;
 			// cout<<"verification rmse ascend or got tiny diff, stop in epoche:"<<e<<endl;
 			break;
@@ -698,9 +699,9 @@ void Lstm::train(vector<DataType*> trainSet, vector<DataType*> labelSet, int epo
 }
 
 /*
-预测单个样本
-参数：
-x、需预测样本的特征集
+Predict a single sample
+Parameters:
+x, feature set of the sample to be predicted
 */
 DataType *Lstm::predict(DataType *x){
     // cout<<"predict X>"<<endl;
@@ -709,9 +710,9 @@ DataType *Lstm::predict(DataType *x){
 
 	LstmStates *state = forward(x);
 	DataType *ret = new DataType[_outNodeNum];
-	memcpy(ret, state->Y, sizeof(DataType)*_outNodeNum);//备份结果
+	memcpy(ret, state->Y, sizeof(DataType)*_outNodeNum);
 	// free(state);
-	_states.push_back(state);//记住当前时间点的单元状态
+	_states.push_back(state);//Remember the unit status at the current time point
     // cout<<"Y>";
     // FOR(i, _outNodeNum) cout<<ret[i]<<",";
     // cout<<endl;
@@ -720,7 +721,7 @@ DataType *Lstm::predict(DataType *x){
 
 
 
-//adam优化器
+//adam optimizer
 double Optimizer::adam(double preTheta, const double dt, const int time){
 	mt = beta1*mt+(1-beta1)*dt;
 	vt = beta2*vt+(1-beta2)*(dt*dt);
@@ -732,13 +733,13 @@ double Optimizer::adam(double preTheta, const double dt, const int time){
 	return theta;
 }
 
-//sgd优化器
+//sgd Optimizer
 double Optimizer::sgd(double preTheta, const double dt){
 	double theta = preTheta - _LEARNING_RATE*dt;
 	return theta;
 }
 
-//初始化偏导集合
+// Initialize the partial derivative set
 Deltas::Deltas(const int in, const int hide, const int out){
     _inNodeNum = in;
     _outNodeNum = out;
@@ -878,7 +879,7 @@ double Delta::optimize(double theta, const int time){
     return theta;
 }
 
-//重置偏导，保存优化器参数状态
+// Reset partial derivatives and save optimizer parameter status
 void Deltas::resetDelta(){
     FOR(i, _inNodeNum){
         FOR(j, _hideNodeNum){

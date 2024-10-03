@@ -3,27 +3,27 @@
 using namespace std;
 
 
-//缩放
+// Scaling: This function scales the input data by dividing each element by the maximum absolute value.
 double scale(double *data, const int len){
-	double max=0;
-	FOR(i,len){
-		double tmp = data[i]>0?data[i]:-data[i];
-		if(max < tmp){
-			max = tmp;
-		}
-	}
+    double max = 0;
+    FOR(i, len){
+        double tmp = data[i] > 0 ? data[i] : -data[i];  // Get the absolute value of each element
+        if(max < tmp){
+            max = tmp;  // Update the max value if the current value is larger
+        }
+    }
 
-	double scaleRate = max;
-	FOR(i,len){
-		data[i] /= scaleRate;
-	}
+    double scaleRate = max;  // Store the scaling factor (maximum absolute value)
+    FOR(i, len){
+        data[i] /= scaleRate;  // Scale each element by the maximum absolute value
+    }
 
-	return scaleRate;
+    return scaleRate;  // Return the scaling factor
 }
 
-//逆缩放
+// Inverse scaling: This function restores the original scale of the data using the scaling factor.
 void invertScale(double *data, const int len, double scaleRate){
-	FOR(i,len){
-		data[i] *= scaleRate;
-	}
+    FOR(i, len){
+        data[i] *= scaleRate;  // Multiply each element by the scaling factor to restore the original values
+    }
 }
