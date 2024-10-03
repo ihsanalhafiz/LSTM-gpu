@@ -1,9 +1,13 @@
 /*
-LSTM的基础实现，供和我一样的初学者参考，欢迎交流、共同进步。
+The basic LSTM model implementation
 
 author: 大火同学
 date:   2018/4/28
 email:  12623862@qq.com
+
+Modified by: 2024 Sep for GPU acceleration
+author: miahafiz
+email: 
 */
 
 #include <cmath>
@@ -15,39 +19,38 @@ email:  12623862@qq.com
 
 using namespace std;
 
-
-//激活函数
+// Activation function
 double sigmoid(double x) {
     return 1.0 / (1.0 + exp(-x));
 }
 
-//激活函数的导数
+// Derivative of the activation function
 double dsigmoid(double y){
     return y * (1.0 - y);  
 }           
 
-//tanh的导数
+// Derivative of tanh
 double dtanh(double y){
     y = tanh(y);
     return 1.0 - y * y;  
 }
 
 /*
-权值初始化
-参数：
-w、二维权值首地址
-x、行数
-y、列数
+Weight initialization
+Parameters:
+w、Weight initialization Parameters :w - 2D weight arrayx - number of rows
+x、number of rows
+y、number of columns
 */
 void initW(double **w, int x, int y){
     FOR(i, x){
         FOR(j, y)
-            w[i][j] = RANDOM_VALUE();  //随机分布   -1~1
+            w[i][j] = RANDOM_VALUE();  //Random distribution -1~1
     }
 }
 
 /*
-打印lstm cell单元的状态，用于调试
+Print the status of the lstm cell for debugging
 */
 void Lstm::showStates(){
 	FOR(s, _states.size()){
@@ -69,7 +72,7 @@ void Lstm::showStates(){
 }
 
 /*
-清除单元状态
+Clear unit status
 */
 void Lstm::resetStates(){
 	FOR(i, _states.size()){
